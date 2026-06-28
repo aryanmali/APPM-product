@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tasks — APPM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="app">
+      <header class="header">
+        <p class="eyebrow">APPM Product</p>
+        <h1 class="title">Tasks</h1>
+        <p class="subtitle">Capture what matters. Check it off when done.</p>
+      </header>
+
+      <form class="add-form" id="add-form" autocomplete="off">
+        <div class="input-wrap">
+          <input
+            type="text"
+            id="task-input"
+            class="task-input"
+            placeholder="What needs to be done?"
+            maxlength="200"
+            aria-label="New task"
+          />
+          <button type="submit" class="btn-add" aria-label="Add task">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      <section class="panel" aria-labelledby="tasks-heading">
+        <div class="panel-toolbar">
+          <h2 id="tasks-heading" class="panel-title">Your list</h2>
+          <div class="filters" role="tablist" aria-label="Filter tasks">
+            <button type="button" class="filter active" data-filter="all" role="tab" aria-selected="true">All</button>
+            <button type="button" class="filter" data-filter="active" role="tab" aria-selected="false">Active</button>
+            <button type="button" class="filter" data-filter="completed" role="tab" aria-selected="false">Done</button>
+          </div>
+        </div>
+
+        <ul class="task-list" id="task-list" aria-live="polite"></ul>
+
+        <div class="empty-state" id="empty-state" hidden>
+          <div class="empty-icon" aria-hidden="true">✦</div>
+          <p class="empty-title">Nothing here yet</p>
+          <p class="empty-hint">Add a task above to get started.</p>
+        </div>
+
+        <footer class="panel-footer" id="panel-footer" hidden>
+          <span class="count" id="task-count">0 tasks left</span>
+          <button type="button" class="btn-clear" id="clear-completed">Clear completed</button>
+        </footer>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
