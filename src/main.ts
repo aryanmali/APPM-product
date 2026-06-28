@@ -1,5 +1,10 @@
 import { renderCalendar, formatShortDate, todayKey } from "./calendar";
 import {
+  createSpeechInput,
+  isSpeechSupported,
+  type SpeechStatus,
+} from "./speech";
+import {
   type Filter,
   type Task,
   activeCount,
@@ -14,6 +19,9 @@ import {
 const addForm = document.getElementById("add-form") as HTMLFormElement;
 const taskInput = document.getElementById("task-input") as HTMLInputElement;
 const taskDateInput = document.getElementById("task-date") as HTMLInputElement;
+const micBtn = document.getElementById("btn-mic") as HTMLButtonElement;
+const speechStatus = document.getElementById("speech-status") as HTMLParagraphElement;
+const inputWrap = document.querySelector(".input-wrap") as HTMLDivElement;
 const taskList = document.getElementById("task-list") as HTMLUListElement;
 const emptyState = document.getElementById("empty-state") as HTMLDivElement;
 const emptyTitle = document.getElementById("empty-title") as HTMLParagraphElement;
@@ -228,8 +236,56 @@ function setFilter(next: Filter): void {
   renderTaskList();
 }
 
+function setSpeechStatus(status: SpeechStatus): void {
+  micBtn.setAttribute("aria-pressed", String(status === "listening"));
+  micBtn.classList.toggle("listening", status === "listening");
+  inputWrap.classList.toggle("listening", status === "listening");
+
+  if (status === "listening") {
+    speechStatus.hidden = false;
+    speechStatus.textContent = "Listening… speak your task";
+    taskInput.placeholder = "Listening…";
+    return;
+  }
+
+  taskInput.placeholder = "What needs to be done?";
+
+  if (status === "denied") {
+    speechStatus.hidden = false;
+    speechStatus.textContent = "Microphone access denied. Allow it in browser settings.";
+    return;
+  }
+
+  if (status === "unsupported") {
+    speechStatus.hidden = false;
+    speechStatus.textContent = "Speech input is not supported in this browser.";
+    micBtn.hidden = true;
+    return;
+  }
+
+  speechStatus.hidden = true;
+  speechStatus.textContent = "";
+}
+
+const speech = createSpeechInput({
+  getBaseText: () => taskInput.value,
+  onTranscript: (text, isFinal) => {
+    taskInput.value = text.slice(0, taskInput.maxLength);
+    if (isFinal) taskInput.focus();
+  },
+  onStatusChange: setSpeechStatus,
+});
+
+if (isSpeechSupported() && speech) {
+  micBtn.hidden = false;
+  micBtn.addEventListener("click", () => speech.toggle());
+} else {
+  setSpeechStatus("unsupported");
+}
+
 addForm.addEventListener("submit", (e) => {
   e.preventDefault();
+  speech?.stop();
   const dueDate = taskDateInput.value || undefined;
   addTask(taskInput.value, dueDate);
   taskInput.value = "";

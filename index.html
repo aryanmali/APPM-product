@@ -39,12 +39,26 @@
             class="task-date-input"
             aria-label="Due date"
           />
+          <button
+            type="button"
+            class="btn-mic"
+            id="btn-mic"
+            aria-label="Dictate task"
+            aria-pressed="false"
+            hidden
+          >
+            <svg class="mic-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="6.5" y="2" width="5" height="8" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M3.5 9a5.5 5.5 0 0011 0M9 14.5V17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
           <button type="submit" class="btn-add" aria-label="Add task">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
         </div>
+        <p class="speech-status" id="speech-status" hidden aria-live="polite"></p>
       </form>
 
       <section class="panel calendar-panel" aria-label="Calendar">

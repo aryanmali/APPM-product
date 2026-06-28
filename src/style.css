@@ -166,6 +166,61 @@ body {
   opacity: 0.5;
 }
 
+.btn-mic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.btn-mic:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.btn-mic.listening {
+  color: white;
+  background: var(--accent);
+  animation: micPulse 1.4s ease infinite;
+}
+
+.btn-mic[hidden] {
+  display: none;
+}
+
+@keyframes micPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(196, 92, 62, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(196, 92, 62, 0);
+  }
+}
+
+.input-wrap.listening {
+  border-color: rgba(196, 92, 62, 0.45);
+  box-shadow: var(--shadow), 0 0 0 3px var(--accent-soft);
+}
+
+.speech-status {
+  margin-top: 0.5rem;
+  padding-left: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+
+.speech-status[hidden] {
+  display: none;
+}
+
 .btn-add {
   display: flex;
   align-items: center;
