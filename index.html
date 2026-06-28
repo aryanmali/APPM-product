@@ -33,6 +33,12 @@
             maxlength="200"
             aria-label="New task"
           />
+          <input
+            type="date"
+            id="task-date"
+            class="task-date-input"
+            aria-label="Due date"
+          />
           <button type="submit" class="btn-add" aria-label="Add task">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -41,9 +47,16 @@
         </div>
       </form>
 
-      <section class="panel" aria-labelledby="tasks-heading">
+      <section class="panel calendar-panel" aria-label="Calendar">
+        <div id="calendar-root" class="calendar-root"></div>
+      </section>
+
+      <section class="panel task-panel" aria-labelledby="tasks-heading">
         <div class="panel-toolbar">
-          <h2 id="tasks-heading" class="panel-title">Your list</h2>
+          <div class="panel-title-wrap">
+            <h2 id="tasks-heading" class="panel-title">Your list</h2>
+            <button type="button" class="btn-clear-date" id="clear-date-filter" hidden>Clear date</button>
+          </div>
           <div class="filters" role="tablist" aria-label="Filter tasks">
             <button type="button" class="filter active" data-filter="all" role="tab" aria-selected="true">All</button>
             <button type="button" class="filter" data-filter="active" role="tab" aria-selected="false">Active</button>
@@ -55,8 +68,8 @@
 
         <div class="empty-state" id="empty-state" hidden>
           <div class="empty-icon" aria-hidden="true">✦</div>
-          <p class="empty-title">Nothing here yet</p>
-          <p class="empty-hint">Add a task above to get started.</p>
+          <p class="empty-title" id="empty-title">Nothing here yet</p>
+          <p class="empty-hint" id="empty-hint">Add a task above to get started.</p>
         </div>
 
         <footer class="panel-footer" id="panel-footer" hidden>

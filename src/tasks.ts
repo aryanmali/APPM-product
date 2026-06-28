@@ -3,6 +3,7 @@ export interface Task {
   text: string;
   completed: boolean;
   createdAt: number;
+  dueDate?: string;
 }
 
 export type Filter = "all" | "active" | "completed";
@@ -24,26 +25,54 @@ export function saveTasks(tasks: Task[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }
 
-export function createTask(text: string): Task {
+export function createTask(text: string, dueDate?: string): Task {
   return {
     id: crypto.randomUUID(),
     text: text.trim(),
     completed: false,
     createdAt: Date.now(),
+    ...(dueDate ? { dueDate } : {}),
   };
 }
 
-export function filterTasks(tasks: Task[], filter: Filter): Task[] {
+export function filterTasks(
+  tasks: Task[],
+  filter: Filter,
+  date?: string | null
+): Task[] {
+  let result: Task[];
+
   switch (filter) {
     case "active":
-      return tasks.filter((t) => !t.completed);
+      result = tasks.filter((t) => !t.completed);
+      break;
     case "completed":
-      return tasks.filter((t) => t.completed);
+      result = tasks.filter((t) => t.completed);
+      break;
     default:
-      return tasks;
+      result = tasks;
   }
+
+  if (date) {
+    result = result.filter((t) => t.dueDate === date);
+  }
+
+  return result;
 }
 
 export function activeCount(tasks: Task[]): number {
   return tasks.filter((t) => !t.completed).length;
+}
+
+export function taskCountsByDate(tasks: Task[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const task of tasks) {
+    if (!task.dueDate) continue;
+    counts.set(task.dueDate, (counts.get(task.dueDate) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function isOverdue(task: Task, today: string): boolean {
+  return !task.completed && !!task.dueDate && task.dueDate < today;
 }
