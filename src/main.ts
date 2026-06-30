@@ -6,19 +6,29 @@ import {
 } from "./speech";
 import {
   type Filter,
+  type Group,
   type Task,
+  GROUP_COLORS,
+  MAX_GROUPS,
   activeCount,
+  addGroup,
   createTask,
   filterTasks,
   isOverdue,
+  loadGroups,
   loadTasks,
+  removeGroup,
   saveTasks,
   taskCountsByDate,
 } from "./tasks";
 
+/* ------------------------------------------------------------------ */
+/*  DOM refs                                                          */
+/* ------------------------------------------------------------------ */
 const addForm = document.getElementById("add-form") as HTMLFormElement;
 const taskInput = document.getElementById("task-input") as HTMLInputElement;
 const taskDateInput = document.getElementById("task-date") as HTMLInputElement;
+const taskGroupSelect = document.getElementById("task-group-select") as HTMLSelectElement;
 const micBtn = document.getElementById("btn-mic") as HTMLButtonElement;
 const speechStatus = document.getElementById("speech-status") as HTMLParagraphElement;
 const inputWrap = document.querySelector(".input-wrap") as HTMLDivElement;
@@ -34,14 +44,31 @@ const clearDateBtn = document.getElementById("clear-date-filter") as HTMLButtonE
 const calendarRoot = document.getElementById("calendar-root") as HTMLElement;
 const filterButtons = document.querySelectorAll<HTMLButtonElement>(".filter");
 
+/* Group DOM refs */
+const groupAddForm = document.getElementById("group-add-form") as HTMLFormElement;
+const groupNameInput = document.getElementById("group-name-input") as HTMLInputElement;
+const groupColorPicker = document.getElementById("group-color-picker") as HTMLDivElement;
+const groupListEl = document.getElementById("group-list") as HTMLUListElement;
+const groupCountEl = document.getElementById("group-count") as HTMLSpanElement;
+const groupFilterBar = document.getElementById("group-filter-bar") as HTMLDivElement;
+
+/* ------------------------------------------------------------------ */
+/*  State                                                             */
+/* ------------------------------------------------------------------ */
 let tasks: Task[] = loadTasks();
+let groups: Group[] = loadGroups();
 let filter: Filter = "all";
 let selectedDate: string | null = null;
+let groupFilter: string | null = null;
+let selectedColorIndex = 0;
 
 const now = new Date();
 let calendarYear = now.getFullYear();
 let calendarMonth = now.getMonth();
 
+/* ------------------------------------------------------------------ */
+/*  Calendar                                                          */
+/* ------------------------------------------------------------------ */
 function renderCalendarView(): void {
   renderCalendar(calendarRoot, {
     year: calendarYear,
@@ -61,8 +88,162 @@ function renderCalendarView(): void {
   });
 }
 
+/* ------------------------------------------------------------------ */
+/*  Group rendering                                                   */
+/* ------------------------------------------------------------------ */
+function renderColorSwatches(container: HTMLElement, usedColors: Set<string>): void {
+  container.innerHTML = "";
+  GROUP_COLORS.forEach((color, i) => {
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.className = "color-swatch";
+    swatch.style.backgroundColor = color;
+    swatch.setAttribute("role", "radio");
+    swatch.setAttribute("aria-label", `Color ${i + 1}`);
+
+    const isUsed = usedColors.has(color);
+    const isSelected = i === selectedColorIndex;
+
+    if (isSelected && !isUsed) {
+      swatch.classList.add("selected");
+      swatch.setAttribute("aria-checked", "true");
+    } else {
+      swatch.setAttribute("aria-checked", "false");
+    }
+
+    if (isUsed) {
+      swatch.classList.add("disabled");
+      swatch.setAttribute("aria-disabled", "true");
+    } else {
+      swatch.addEventListener("click", () => {
+        selectedColorIndex = i;
+        renderGroupColorPicker();
+      });
+    }
+
+    container.appendChild(swatch);
+  });
+}
+
+function renderGroupColorPicker(): void {
+  const usedColors = new Set(groups.map((g) => g.color));
+
+  // Auto-select next available color if current is taken
+  if (usedColors.has(GROUP_COLORS[selectedColorIndex])) {
+    const nextAvailable = GROUP_COLORS.findIndex((c) => !usedColors.has(c));
+    if (nextAvailable !== -1) {
+      selectedColorIndex = nextAvailable;
+    }
+  }
+
+  renderColorSwatches(groupColorPicker, usedColors);
+}
+
+function renderGroupList(): void {
+  groupListEl.innerHTML = "";
+  groupCountEl.textContent = groups.length > 0 ? `${groups.length} / ${MAX_GROUPS}` : "";
+
+  for (const group of groups) {
+    const li = document.createElement("li");
+    li.className = "group-item";
+    li.dataset.id = group.id;
+
+    const dot = document.createElement("span");
+    dot.className = "group-dot";
+    dot.style.backgroundColor = group.color;
+
+    const name = document.createElement("span");
+    name.className = "group-name";
+    name.textContent = group.name;
+
+    const count = tasks.filter((t) => t.groupId === group.id).length;
+    const countSpan = document.createElement("span");
+    countSpan.className = "group-task-count";
+    countSpan.textContent = count === 1 ? "1 task" : `${count} tasks`;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "btn-group-delete";
+    deleteBtn.setAttribute("aria-label", `Delete group "${group.name}"`);
+    deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    deleteBtn.addEventListener("click", () => handleDeleteGroup(group.id));
+
+    li.append(dot, name, countSpan, deleteBtn);
+    groupListEl.appendChild(li);
+  }
+}
+
+function renderGroupSelect(): void {
+  const currentValue = taskGroupSelect.value;
+  taskGroupSelect.innerHTML = "";
+
+  const noGroup = document.createElement("option");
+  noGroup.value = "";
+  noGroup.textContent = "No group";
+  taskGroupSelect.appendChild(noGroup);
+
+  for (const group of groups) {
+    const opt = document.createElement("option");
+    opt.value = group.id;
+    opt.textContent = group.name;
+    taskGroupSelect.appendChild(opt);
+  }
+
+  // Restore selection if still valid
+  if (groups.some((g) => g.id === currentValue)) {
+    taskGroupSelect.value = currentValue;
+  } else {
+    taskGroupSelect.value = "";
+  }
+}
+
+function renderGroupFilterBar(): void {
+  groupFilterBar.innerHTML = "";
+
+  if (groups.length === 0) {
+    groupFilterBar.hidden = true;
+    return;
+  }
+
+  groupFilterBar.hidden = false;
+
+  // "All groups" chip
+  const allChip = document.createElement("button");
+  allChip.type = "button";
+  allChip.className = `group-chip${!groupFilter ? " active" : ""}`;
+  allChip.textContent = "All";
+  allChip.addEventListener("click", () => {
+    groupFilter = null;
+    renderAll();
+  });
+  groupFilterBar.appendChild(allChip);
+
+  for (const group of groups) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `group-chip${groupFilter === group.id ? " active" : ""}`;
+
+    const dot = document.createElement("span");
+    dot.className = "group-chip-dot";
+    dot.style.backgroundColor = group.color;
+
+    chip.appendChild(dot);
+    chip.appendChild(document.createTextNode(group.name));
+
+    chip.addEventListener("click", () => {
+      groupFilter = groupFilter === group.id ? null : group.id;
+      renderAll();
+    });
+
+    groupFilterBar.appendChild(chip);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Task list rendering                                               */
+/* ------------------------------------------------------------------ */
 function renderTaskList(): void {
-  const visible = filterTasks(tasks, filter, selectedDate);
+  const visible = filterTasks(tasks, filter, selectedDate, groupFilter);
   const remaining = activeCount(tasks);
   const hasCompleted = tasks.some((t) => t.completed);
   const today = todayKey();
@@ -87,7 +268,11 @@ function renderTaskList(): void {
   }
 
   if (showEmpty) {
-    if (selectedDate) {
+    if (groupFilter) {
+      const gName = groups.find((g) => g.id === groupFilter)?.name ?? "this group";
+      emptyTitle.textContent = `No tasks in ${gName}`;
+      emptyHint.textContent = "Assign tasks to this group or pick another.";
+    } else if (selectedDate) {
       emptyTitle.textContent = "No tasks this day";
       emptyHint.textContent = "Add one above or pick another date.";
     } else if (filter === "completed") {
@@ -110,9 +295,16 @@ function renderTaskList(): void {
 
 function renderAll(): void {
   renderCalendarView();
+  renderGroupList();
+  renderGroupSelect();
+  renderGroupFilterBar();
+  renderGroupColorPicker();
   renderTaskList();
 }
 
+/* ------------------------------------------------------------------ */
+/*  Task element builder                                              */
+/* ------------------------------------------------------------------ */
 function createTaskElement(task: Task, today: string): HTMLLIElement {
   const overdue = isOverdue(task, today);
 
@@ -144,11 +336,38 @@ function createTaskElement(task: Task, today: string): HTMLLIElement {
 
   body.appendChild(text);
 
-  if (task.dueDate) {
-    const dateLabel = document.createElement("span");
-    dateLabel.className = `task-due${overdue ? " overdue" : ""}`;
-    dateLabel.textContent = formatShortDate(task.dueDate);
-    body.appendChild(dateLabel);
+  /* Meta row: due date + group badge */
+  const hasMeta = task.dueDate || task.groupId;
+  if (hasMeta) {
+    const meta = document.createElement("div");
+    meta.className = "task-meta";
+
+    if (task.dueDate) {
+      const dateLabel = document.createElement("span");
+      dateLabel.className = `task-due${overdue ? " overdue" : ""}`;
+      dateLabel.textContent = formatShortDate(task.dueDate);
+      meta.appendChild(dateLabel);
+    }
+
+    if (task.groupId) {
+      const group = groups.find((g) => g.id === task.groupId);
+      if (group) {
+        const badge = document.createElement("span");
+        badge.className = "task-group-badge";
+        badge.style.backgroundColor = hexToRgba(group.color, 0.12);
+        badge.style.color = group.color;
+
+        const badgeDot = document.createElement("span");
+        badgeDot.className = "task-group-badge-dot";
+        badgeDot.style.backgroundColor = group.color;
+
+        badge.appendChild(badgeDot);
+        badge.appendChild(document.createTextNode(group.name));
+        meta.appendChild(badge);
+      }
+    }
+
+    body.appendChild(meta);
   }
 
   const dateBtn = document.createElement("button");
@@ -164,33 +383,46 @@ function createTaskElement(task: Task, today: string): HTMLLIElement {
   deleteBtn.setAttribute("aria-label", "Delete task");
   deleteBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`;
 
-  checkbox.addEventListener("click", () => toggleTask(task.id));
-  deleteBtn.addEventListener("click", () => deleteTask(task.id));
+  checkbox.addEventListener("click", () => handleToggleTask(task.id));
+  deleteBtn.addEventListener("click", () => handleDeleteTask(task.id));
 
   li.append(checkbox, body, dateBtn, deleteBtn);
   return li;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                           */
+/* ------------------------------------------------------------------ */
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Task handlers                                                     */
+/* ------------------------------------------------------------------ */
 function persist(): void {
   saveTasks(tasks);
   renderAll();
 }
 
-function addTask(text: string, dueDate?: string): void {
+function handleAddTask(text: string, dueDate?: string, groupId?: string): void {
   const trimmed = text.trim();
   if (!trimmed) return;
-  tasks = [createTask(trimmed, dueDate), ...tasks];
+  tasks = [createTask(trimmed, dueDate, groupId), ...tasks];
   persist();
 }
 
-function toggleTask(id: string): void {
+function handleToggleTask(id: string): void {
   tasks = tasks.map((t) =>
     t.id === id ? { ...t, completed: !t.completed } : t
   );
   persist();
 }
 
-function deleteTask(id: string): void {
+function handleDeleteTask(id: string): void {
   tasks = tasks.filter((t) => t.id !== id);
   persist();
 }
@@ -226,6 +458,38 @@ function setTaskDueDate(id: string): void {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Group handlers                                                    */
+/* ------------------------------------------------------------------ */
+function handleAddGroup(name: string, color: string): void {
+  const trimmed = name.trim();
+  if (!trimmed || groups.length >= MAX_GROUPS) return;
+
+  // Prevent duplicate names
+  if (groups.some((g) => g.name.toLowerCase() === trimmed.toLowerCase())) return;
+
+  addGroup(groups, trimmed, color);
+  renderAll();
+}
+
+function handleDeleteGroup(id: string): void {
+  // Unassign tasks from this group
+  tasks = tasks.map((t) =>
+    t.groupId === id ? { ...t, groupId: undefined } : t
+  );
+  saveTasks(tasks);
+
+  groups = removeGroup(groups, id);
+
+  // Reset group filter if it pointed to the deleted group
+  if (groupFilter === id) groupFilter = null;
+
+  renderAll();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Filter handler                                                    */
+/* ------------------------------------------------------------------ */
 function setFilter(next: Filter): void {
   filter = next;
   filterButtons.forEach((btn) => {
@@ -236,6 +500,9 @@ function setFilter(next: Filter): void {
   renderTaskList();
 }
 
+/* ------------------------------------------------------------------ */
+/*  Speech                                                            */
+/* ------------------------------------------------------------------ */
 function setSpeechStatus(status: SpeechStatus): void {
   micBtn.setAttribute("aria-pressed", String(status === "listening"));
   micBtn.classList.toggle("listening", status === "listening");
@@ -283,13 +550,25 @@ if (isSpeechSupported() && speech) {
   setSpeechStatus("unsupported");
 }
 
+/* ------------------------------------------------------------------ */
+/*  Event wiring                                                      */
+/* ------------------------------------------------------------------ */
 addForm.addEventListener("submit", (e) => {
   e.preventDefault();
   speech?.stop();
   const dueDate = taskDateInput.value || undefined;
-  addTask(taskInput.value, dueDate);
+  const groupId = taskGroupSelect.value || undefined;
+  handleAddTask(taskInput.value, dueDate, groupId);
   taskInput.value = "";
   taskInput.focus();
+});
+
+groupAddForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const color = GROUP_COLORS[selectedColorIndex];
+  handleAddGroup(groupNameInput.value, color);
+  groupNameInput.value = "";
+  groupNameInput.focus();
 });
 
 clearCompletedBtn.addEventListener("click", () => {
@@ -309,6 +588,9 @@ filterButtons.forEach((btn) => {
   });
 });
 
+/* ------------------------------------------------------------------ */
+/*  Boot                                                              */
+/* ------------------------------------------------------------------ */
 if (selectedDate) taskDateInput.value = selectedDate;
 
 renderAll();

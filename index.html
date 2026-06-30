@@ -33,6 +33,13 @@
             maxlength="200"
             aria-label="New task"
           />
+          <select
+            id="task-group-select"
+            class="task-group-select"
+            aria-label="Assign group"
+          >
+            <option value="">No group</option>
+          </select>
           <input
             type="date"
             id="task-date"
@@ -65,6 +72,32 @@
         <div id="calendar-root" class="calendar-root"></div>
       </section>
 
+      <section class="panel groups-panel" id="groups-panel" aria-labelledby="groups-heading">
+        <div class="groups-panel-header">
+          <h2 id="groups-heading" class="panel-title">Groups</h2>
+          <span class="group-count" id="group-count"></span>
+        </div>
+        <form class="group-add-form" id="group-add-form" autocomplete="off">
+          <div class="group-color-picker" id="group-color-picker" role="radiogroup" aria-label="Group color"></div>
+          <div class="group-add-row">
+            <input
+              type="text"
+              id="group-name-input"
+              class="group-name-input"
+              placeholder="New group name"
+              maxlength="30"
+              aria-label="Group name"
+            />
+            <button type="submit" class="btn-group-add" id="btn-group-add" aria-label="Create group">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+        <ul class="group-list" id="group-list" aria-label="Your groups"></ul>
+      </section>
+
       <section class="panel task-panel" aria-labelledby="tasks-heading">
         <div class="panel-toolbar">
           <div class="panel-title-wrap">
@@ -77,6 +110,8 @@
             <button type="button" class="filter" data-filter="completed" role="tab" aria-selected="false">Done</button>
           </div>
         </div>
+
+        <div class="group-filter-bar" id="group-filter-bar" hidden aria-label="Filter by group"></div>
 
         <ul class="task-list" id="task-list" aria-live="polite"></ul>
 
