@@ -1,4 +1,5 @@
 import { renderCalendar, formatShortDate, todayKey } from "./calendar";
+import { initCursorFx } from "./cursor-fx";
 import {
   createSpeechInput,
   isSpeechSupported,
@@ -595,3 +596,4 @@ if (selectedDate) taskDateInput.value = selectedDate;
 
 renderAll();
 taskInput.focus();
+initCursorFx();
