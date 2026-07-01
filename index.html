@@ -23,109 +23,117 @@
         <p class="subtitle">Capture what matters. Check it off when done.</p>
       </header>
 
-      <form class="add-form" id="add-form" autocomplete="off">
-        <div class="input-wrap">
-          <input
-            type="text"
-            id="task-input"
-            class="task-input"
-            placeholder="What needs to be done?"
-            maxlength="200"
-            aria-label="New task"
-          />
-          <select
-            id="task-group-select"
-            class="task-group-select"
-            aria-label="Assign group"
-          >
-            <option value="">No group</option>
-          </select>
-          <input
-            type="date"
-            id="task-date"
-            class="task-date-input"
-            aria-label="Due date"
-          />
-          <button
-            type="button"
-            class="btn-mic"
-            id="btn-mic"
-            aria-label="Dictate task"
-            aria-pressed="false"
-            hidden
-          >
-            <svg class="mic-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <rect x="6.5" y="2" width="5" height="8" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3.5 9a5.5 5.5 0 0011 0M9 14.5V17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button type="submit" class="btn-add" aria-label="Add task">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-        <p class="speech-status" id="speech-status" hidden aria-live="polite"></p>
-      </form>
+      <div class="app-grid">
+        <!-- ===== Main column ===== -->
+        <div class="app-main">
+          <form class="add-form" id="add-form" autocomplete="off">
+            <div class="input-wrap">
+              <input
+                type="text"
+                id="task-input"
+                class="task-input"
+                placeholder="What needs to be done?"
+                maxlength="200"
+                aria-label="New task"
+              />
+              <select
+                id="task-group-select"
+                class="task-group-select"
+                aria-label="Assign group"
+              >
+                <option value="">No group</option>
+              </select>
+              <input
+                type="date"
+                id="task-date"
+                class="task-date-input"
+                aria-label="Due date"
+              />
+              <button
+                type="button"
+                class="btn-mic"
+                id="btn-mic"
+                aria-label="Dictate task"
+                aria-pressed="false"
+                hidden
+              >
+                <svg class="mic-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <rect x="6.5" y="2" width="5" height="8" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M3.5 9a5.5 5.5 0 0011 0M9 14.5V17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button type="submit" class="btn-add" aria-label="Add task">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <p class="speech-status" id="speech-status" hidden aria-live="polite"></p>
+          </form>
 
-      <section class="panel calendar-panel" aria-label="Calendar">
-        <div id="calendar-root" class="calendar-root"></div>
-      </section>
+          <section class="panel task-panel" aria-labelledby="tasks-heading">
+            <div class="panel-toolbar">
+              <div class="panel-title-wrap">
+                <h2 id="tasks-heading" class="panel-title">Your list</h2>
+                <button type="button" class="btn-clear-date" id="clear-date-filter" hidden>Clear date</button>
+              </div>
+              <div class="filters" role="tablist" aria-label="Filter tasks">
+                <button type="button" class="filter active" data-filter="all" role="tab" aria-selected="true">All</button>
+                <button type="button" class="filter" data-filter="active" role="tab" aria-selected="false">Active</button>
+                <button type="button" class="filter" data-filter="completed" role="tab" aria-selected="false">Done</button>
+              </div>
+            </div>
 
-      <section class="panel groups-panel" id="groups-panel" aria-labelledby="groups-heading">
-        <div class="groups-panel-header">
-          <h2 id="groups-heading" class="panel-title">Groups</h2>
-          <span class="group-count" id="group-count"></span>
-        </div>
-        <form class="group-add-form" id="group-add-form" autocomplete="off">
-          <div class="group-color-picker" id="group-color-picker" role="radiogroup" aria-label="Group color"></div>
-          <div class="group-add-row">
-            <input
-              type="text"
-              id="group-name-input"
-              class="group-name-input"
-              placeholder="New group name"
-              maxlength="30"
-              aria-label="Group name"
-            />
-            <button type="submit" class="btn-group-add" id="btn-group-add" aria-label="Create group">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
-        </form>
-        <ul class="group-list" id="group-list" aria-label="Your groups"></ul>
-      </section>
+            <div class="group-filter-bar" id="group-filter-bar" hidden aria-label="Filter by group"></div>
 
-      <section class="panel task-panel" aria-labelledby="tasks-heading">
-        <div class="panel-toolbar">
-          <div class="panel-title-wrap">
-            <h2 id="tasks-heading" class="panel-title">Your list</h2>
-            <button type="button" class="btn-clear-date" id="clear-date-filter" hidden>Clear date</button>
-          </div>
-          <div class="filters" role="tablist" aria-label="Filter tasks">
-            <button type="button" class="filter active" data-filter="all" role="tab" aria-selected="true">All</button>
-            <button type="button" class="filter" data-filter="active" role="tab" aria-selected="false">Active</button>
-            <button type="button" class="filter" data-filter="completed" role="tab" aria-selected="false">Done</button>
-          </div>
+            <ul class="task-list" id="task-list" aria-live="polite"></ul>
+
+            <div class="empty-state" id="empty-state" hidden>
+              <div class="empty-icon" aria-hidden="true">✦</div>
+              <p class="empty-title" id="empty-title">Nothing here yet</p>
+              <p class="empty-hint" id="empty-hint">Add a task above to get started.</p>
+            </div>
+
+            <footer class="panel-footer" id="panel-footer" hidden>
+              <span class="count" id="task-count">0 tasks left</span>
+              <button type="button" class="btn-clear" id="clear-completed">Clear completed</button>
+            </footer>
+          </section>
         </div>
 
-        <div class="group-filter-bar" id="group-filter-bar" hidden aria-label="Filter by group"></div>
+        <!-- ===== Sidebar column ===== -->
+        <aside class="app-sidebar">
+          <section class="panel calendar-panel" aria-label="Calendar">
+            <div id="calendar-root" class="calendar-root"></div>
+          </section>
 
-        <ul class="task-list" id="task-list" aria-live="polite"></ul>
-
-        <div class="empty-state" id="empty-state" hidden>
-          <div class="empty-icon" aria-hidden="true">✦</div>
-          <p class="empty-title" id="empty-title">Nothing here yet</p>
-          <p class="empty-hint" id="empty-hint">Add a task above to get started.</p>
-        </div>
-
-        <footer class="panel-footer" id="panel-footer" hidden>
-          <span class="count" id="task-count">0 tasks left</span>
-          <button type="button" class="btn-clear" id="clear-completed">Clear completed</button>
-        </footer>
-      </section>
+          <section class="panel groups-panel" id="groups-panel" aria-labelledby="groups-heading">
+            <div class="groups-panel-header">
+              <h2 id="groups-heading" class="panel-title">Groups</h2>
+              <span class="group-count" id="group-count"></span>
+            </div>
+            <form class="group-add-form" id="group-add-form" autocomplete="off">
+              <div class="group-color-picker" id="group-color-picker" role="radiogroup" aria-label="Group color"></div>
+              <div class="group-add-row">
+                <input
+                  type="text"
+                  id="group-name-input"
+                  class="group-name-input"
+                  placeholder="New group name"
+                  maxlength="30"
+                  aria-label="Group name"
+                />
+                <button type="submit" class="btn-group-add" id="btn-group-add" aria-label="Create group">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </form>
+            <ul class="group-list" id="group-list" aria-label="Your groups"></ul>
+          </section>
+        </aside>
+      </div>
     </main>
 
     <script type="module" src="/src/main.ts"></script>
