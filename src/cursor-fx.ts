@@ -1,20 +1,15 @@
 /* ------------------------------------------------------------------ */
-/*  Cursor-reactive background effects                                */
-/*  – Ambient blobs drift toward cursor (parallax)                    */
-/*  – Soft radial glow tracks the cursor                              */
-/*  – Floating particles scatter from cursor proximity                */
+/*  Dot-grid magnetic field background                                */
+/*  – Evenly spaced dots across the viewport                          */
+/*  – Dots within a radius are attracted toward the cursor            */
+/*  – Smooth lerp for organic pull / release motion                   */
 /* ------------------------------------------------------------------ */
 
-interface Particle {
-  el: HTMLElement;
-  baseX: number;
-  baseY: number;
+interface Dot {
+  homeX: number;
+  homeY: number;
   x: number;
   y: number;
-  size: number;
-  speed: number;
-  drift: number;
-  phase: number;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -22,140 +17,120 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 export function initCursorFx(): void {
-  const blobA = document.querySelector(".ambient-a") as HTMLElement;
-  const blobB = document.querySelector(".ambient-b") as HTMLElement;
-  if (!blobA || !blobB) return;
+  const canvas = document.createElement("canvas");
+  canvas.className = "dot-field";
+  document.body.prepend(canvas);
 
-  /* --- Cursor glow element --- */
-  const glow = document.createElement("div");
-  glow.className = "cursor-glow";
-  document.body.appendChild(glow);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-  /* --- Particle field --- */
-  const PARTICLE_COUNT = 18;
-  const particles: Particle[] = [];
-  const particleContainer = document.createElement("div");
-  particleContainer.className = "particle-field";
-  document.body.appendChild(particleContainer);
+  /* --- Config --- */
+  const SPACING = 36;
+  const DOT_BASE_RADIUS = 1.4;
+  const ATTRACT_RADIUS = 160;
+  const ATTRACT_STRENGTH = 0.35;
+  const RETURN_SPEED = 0.08;
+  const BASE_OPACITY = 0.14;
+  const ACTIVE_OPACITY = 0.52;
+  const ACTIVE_RADIUS_BOOST = 1.2;
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    const el = document.createElement("div");
-    el.className = "particle";
-    const size = 2 + Math.random() * 4;
-    const baseX = Math.random() * 100;
-    const baseY = Math.random() * 100;
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.opacity = `${0.15 + Math.random() * 0.3}`;
-    particleContainer.appendChild(el);
+  /* --- State --- */
+  let dots: Dot[] = [];
+  let mouseX = -9999;
+  let mouseY = -9999;
+  let dpr = window.devicePixelRatio || 1;
 
-    particles.push({
-      el,
-      baseX,
-      baseY,
-      x: (baseX / 100) * window.innerWidth,
-      y: (baseY / 100) * window.innerHeight,
-      size,
-      speed: 0.3 + Math.random() * 0.7,
-      drift: 20 + Math.random() * 40,
-      phase: Math.random() * Math.PI * 2,
-    });
+  /* --- Build dot grid --- */
+  function createDots(): void {
+    dots = [];
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+    const cols = Math.ceil(w / SPACING) + 1;
+    const rows = Math.ceil(h / SPACING) + 1;
+    const offsetX = ((w - (cols - 1) * SPACING) / 2);
+    const offsetY = ((h - (rows - 1) * SPACING) / 2);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const hx = offsetX + c * SPACING;
+        const hy = offsetY + r * SPACING;
+        dots.push({ homeX: hx, homeY: hy, x: hx, y: hy });
+      }
+    }
   }
 
-  /* --- Mouse state --- */
-  let mouseX = window.innerWidth / 2;
-  let mouseY = window.innerHeight / 2;
-  let smoothMouseX = mouseX;
-  let smoothMouseY = mouseY;
-  let blobAX = 0;
-  let blobAY = 0;
-  let blobBX = 0;
-  let blobBY = 0;
-  let glowX = mouseX;
-  let glowY = mouseY;
-  let isMouseInWindow = false;
+  /* --- Resize handler --- */
+  function resize(): void {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
+    ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    createDots();
+  }
 
+  window.addEventListener("resize", resize);
+  resize();
+
+  /* --- Mouse tracking --- */
   document.addEventListener("mousemove", (e) => {
     mouseX = e.clientX;
     mouseY = e.clientY;
-    isMouseInWindow = true;
   });
 
   document.addEventListener("mouseleave", () => {
-    isMouseInWindow = false;
+    mouseX = -9999;
+    mouseY = -9999;
   });
 
-  /* --- Handle resize --- */
-  let winW = window.innerWidth;
-  let winH = window.innerHeight;
-  window.addEventListener("resize", () => {
-    winW = window.innerWidth;
-    winH = window.innerHeight;
-    particles.forEach((p) => {
-      p.x = (p.baseX / 100) * winW;
-      p.y = (p.baseY / 100) * winH;
-    });
-  });
-
-  /* --- Animation loop --- */
-  let time = 0;
-
+  /* --- Render loop --- */
   function animate(): void {
-    time += 0.008;
-    const halfW = winW / 2;
-    const halfH = winH / 2;
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+    ctx!.clearRect(0, 0, w, h);
 
-    /* Smooth mouse (for glow) */
-    smoothMouseX = lerp(smoothMouseX, mouseX, 0.1);
-    smoothMouseY = lerp(smoothMouseY, mouseY, 0.1);
+    const attractR2 = ATTRACT_RADIUS * ATTRACT_RADIUS;
 
-    /* Blob A — slow parallax (far depth) */
-    const targetAX = ((mouseX - halfW) / halfW) * 60;
-    const targetAY = ((mouseY - halfH) / halfH) * 40;
-    blobAX = lerp(blobAX, targetAX, 0.015);
-    blobAY = lerp(blobAY, targetAY, 0.015);
-    blobA.style.transform = `translate(${blobAX}px, ${blobAY}px)`;
+    for (let i = 0; i < dots.length; i++) {
+      const dot = dots[i];
 
-    /* Blob B — faster parallax (near depth) */
-    const targetBX = ((mouseX - halfW) / halfW) * -45;
-    const targetBY = ((mouseY - halfH) / halfH) * -30;
-    blobBX = lerp(blobBX, targetBX, 0.025);
-    blobBY = lerp(blobBY, targetBY, 0.025);
-    blobB.style.transform = `translate(${blobBX}px, ${blobBY}px)`;
+      /* Distance from cursor to dot's home position */
+      const dx = mouseX - dot.homeX;
+      const dy = mouseY - dot.homeY;
+      const dist2 = dx * dx + dy * dy;
 
-    /* Cursor glow */
-    glowX = lerp(glowX, mouseX, 0.06);
-    glowY = lerp(glowY, mouseY, 0.06);
-    const glowOpacity = isMouseInWindow ? 1 : 0;
-    glow.style.transform = `translate(${glowX - 200}px, ${glowY - 200}px)`;
-    glow.style.opacity = String(glowOpacity);
+      let targetX = dot.homeX;
+      let targetY = dot.homeY;
 
-    /* Particles */
-    for (const p of particles) {
-      /* Gentle floating drift */
-      const floatX = Math.sin(time * p.speed + p.phase) * p.drift;
-      const floatY = Math.cos(time * p.speed * 0.7 + p.phase) * p.drift * 0.6;
-
-      let targetX = (p.baseX / 100) * winW + floatX;
-      let targetY = (p.baseY / 100) * winH + floatY;
-
-      /* Cursor repulsion */
-      if (isMouseInWindow) {
-        const dx = targetX - smoothMouseX;
-        const dy = targetY - smoothMouseY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const repelRadius = 180;
-        if (dist < repelRadius) {
-          const force = ((repelRadius - dist) / repelRadius) * 50;
-          const angle = Math.atan2(dy, dx);
-          targetX += Math.cos(angle) * force;
-          targetY += Math.sin(angle) * force;
-        }
+      if (dist2 < attractR2) {
+        const dist = Math.sqrt(dist2);
+        /* Ease-out curve: stronger pull when closer */
+        const t = 1 - dist / ATTRACT_RADIUS;
+        const force = t * t * ATTRACT_STRENGTH;
+        targetX = dot.homeX + dx * force;
+        targetY = dot.homeY + dy * force;
       }
 
-      p.x = lerp(p.x, targetX, 0.04);
-      p.y = lerp(p.y, targetY, 0.04);
-      p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+      /* Smooth interpolation */
+      dot.x = lerp(dot.x, targetX, RETURN_SPEED);
+      dot.y = lerp(dot.y, targetY, RETURN_SPEED);
+
+      /* Visual: proximity-based size + opacity */
+      const renderDx = mouseX - dot.x;
+      const renderDy = mouseY - dot.y;
+      const renderDist2 = renderDx * renderDx + renderDy * renderDy;
+      const proximity = renderDist2 < attractR2
+        ? 1 - Math.sqrt(renderDist2) / ATTRACT_RADIUS
+        : 0;
+
+      const radius = DOT_BASE_RADIUS + proximity * ACTIVE_RADIUS_BOOST;
+      const opacity = BASE_OPACITY + proximity * (ACTIVE_OPACITY - BASE_OPACITY);
+
+      ctx!.beginPath();
+      ctx!.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
+      ctx!.fillStyle = `rgba(196, 92, 62, ${opacity})`;
+      ctx!.fill();
     }
 
     requestAnimationFrame(animate);

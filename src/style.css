@@ -39,7 +39,16 @@ body {
   overflow-x: hidden;
 }
 
-/* === Ambient blobs (JS-driven parallax via cursor-fx.ts) === */
+/* === Dot-grid magnetic field canvas === */
+
+.dot-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* === Ambient color blobs (static background warmth) === */
 
 .ambient {
   position: fixed;
@@ -47,8 +56,6 @@ body {
   filter: blur(80px);
   pointer-events: none;
   z-index: 0;
-  will-change: transform;
-  transition: opacity 0.6s ease;
 }
 
 .ambient-a {
@@ -58,8 +65,8 @@ body {
   right: -5%;
   background: radial-gradient(
     circle,
-    rgba(196, 92, 62, 0.25) 0%,
-    rgba(196, 92, 62, 0.08) 60%,
+    rgba(196, 92, 62, 0.18) 0%,
+    rgba(196, 92, 62, 0.06) 60%,
     transparent 100%
   );
 }
@@ -71,52 +78,10 @@ body {
   left: -5%;
   background: radial-gradient(
     circle,
-    rgba(180, 160, 120, 0.3) 0%,
-    rgba(180, 160, 120, 0.1) 60%,
+    rgba(180, 160, 120, 0.22) 0%,
+    rgba(180, 160, 120, 0.07) 60%,
     transparent 100%
   );
-}
-
-/* === Cursor glow spotlight === */
-
-.cursor-glow {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(196, 92, 62, 0.08) 0%,
-    rgba(196, 92, 62, 0.03) 40%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
-  will-change: transform, opacity;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-/* === Floating particle field === */
-
-.particle-field {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.particle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  background: rgba(196, 92, 62, 0.35);
-  will-change: transform;
-  transition: opacity 0.4s ease;
 }
 
 /* === App shell & two-column grid === */
